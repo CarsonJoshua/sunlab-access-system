@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sunlab Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"-->
+    <!--          integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">-->
+</head>
+<body>
+    <div th:insert="~{layout::header}"></div>
+
+    <p>Users Page</p>
+    <div id="table-container">
+
+    </div>
+    <a class="btn nav-btn" href="/admin">
+        Back
+    </a>
+    <div th:insert="~{layout::footer}"></div>
+</body>
+</html>
+<script type="module">
+
+    // Import the functions you need from the SDKs you need
+
+    import { initializeApp} from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { collection, addDoc, setDoc, doc, updateDoc, getFirestore, getDocs, query, limit, orderBy, where } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    // import M from "materialize-css"
+    // TODO: Add SDKs for Firebase products that you want to use
+
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+
+    // Your web app's Firebase configuration
+    //TODO move this to remove redundancy between pages and seal api key leaks
+    const firebaseConfig = {
+        apiKey: "AIzaSyCr-hdweuFimP-JarXSuc5b665HpULZpII",
+        authDomain: "sunlab-6fa5a.firebaseapp.com",
+        projectId: "sunlab-6fa5a",
+        storageBucket: "sunlab-6fa5a.appspot.com",
+        messagingSenderId: "335237155549",
+        appId: "1:335237155549:web:0faa7bf48b46f6ae51a934"
+    };
+
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tblContainer = document.getElementById("table-container");
+
+
+    reload();
+
+    async function reload(){
+        while(tblContainer.lastElementChild){
+            tblContainer.removeChild(tblContainer.lastElementChild)
+        }
+        (await getDocs(query(collection(db, "users"))))
+            .forEach(doc=>{
+                console.log(doc)
+                addEntry(doc.data(), doc.id)
+            })
+        addEntryAdderEntry();
+    }
+
+    function addEntryAdderEntry(){
+        //long variable names cause am tired and is funny
+        const entryAdderContainer = document.createElement("div");
+        entryAdderContainer.className = "row card";
+        {
+            const entryAdderInputContainer = document.createElement("div");
+            entryAdderInputContainer.style.visibility = "hidden";
+
+            const entryAdderIdInput = document.createElement("input");
+            const entryAdderNameInput = document.createElement("input");
+            {
+                const entryAdderIdContainer = document.createElement("div");
+                entryAdderIdContainer.className = "col s2 card";
+                entryAdderIdContainer.append(entryAdderIdInput);
+                entryAdderInputContainer.append(entryAdderIdContainer);
+            }
+            {
+                const entryAdderNameContainer = document.createElement("div");
+                entryAdderNameContainer.className = "col s9 card";
+                entryAdderNameContainer.append(entryAdderNameInput);
+                entryAdderInputContainer.append(entryAdderNameContainer);
+            }
+            {
+                const entryAdderButtonContainer = document.createElement("div");
+                entryAdderButtonContainer.className = "col s1 card";
+                {
+                    const entryAdderButton = document.createElement("a");
+                    entryAdderButton.className = "btn";
+                    entryAdderButton.innerHTML = "+";
+                    entryAdderButton.addEventListener("click", async function (){
+                        await setDoc(doc(db, "users", entryAdderIdInput.value), {
+                            name:entryAdderNameInput.value,
+                            permission:false
+                        });
+                        await reload();
+
+                    })
+                    entryAdderButtonContainer.append(entryAdderButton);
+                }
+                entryAdderInputContainer.append(entryAdderButtonContainer);
+            }
+            entryAdderContainer.append(entryAdderInputContainer);
+            //scoping weird here to allow event listener for activator button
+            {
+                const entryAdderActivatorButtonContainer = document.createElement("div");
+                entryAdderActivatorButtonContainer.className = "column s12";
+                {
+                    const entryAdderActivatorButton = document.createElement("a");
+                    entryAdderActivatorButton.className = "btn";
+                    entryAdderActivatorButton.innerHTML = "+";
+                    // entryAdderActivatorButton.style.display = "flex";
+                    entryAdderActivatorButton.style.flex = "100"
+                    entryAdderActivatorButton.addEventListener("click", function(){
+                        entryAdderActivatorButton.style.visibility = "hidden"
+                        entryAdderInputContainer.style.visibility = "visible"
+                    })
+                    entryAdderActivatorButtonContainer.append(entryAdderActivatorButton);
+                }
+                entryAdderContainer.append(entryAdderActivatorButtonContainer);
+            }
+        }
+        tblContainer.append(entryAdderContainer);
+    }
+
+    function addEntry(entry, id){
+        const entryElement = document.createElement("div");
+        entryElement.className = "row card";
+        {
+            const idElement = document.createElement("div");
+            idElement.className = "col s2 card";
+            idElement.innerHTML = id;
+            entryElement.append(idElement);
+        }
+        {
+            const nameElement = document.createElement("div");
+            nameElement.className = "col s9 card";
+            nameElement.innerHTML = entry.name;
+            entryElement.append(nameElement);
+        }
+        {
+            const accessElement = document.createElement("div");
+            accessElement.className = "col s1 card";
+            {
+                const accessLabel = document.createElement("label");
+                {
+                    const accessCheckbox = document.createElement("input");
+                    accessCheckbox.type = "checkbox";
+                    accessCheckbox.checked = entry.permission;
+                    // accessCheckbox.entryId = id;
+                    accessCheckbox.addEventListener("change", async function(){
+                        console.log("Checkbox changed, id =" + id);
+                        await updateDoc(doc(db, "users", id), {
+                            name:entry.name,
+                            permission:accessCheckbox.checked
+                        })
+                    });
+                    accessLabel.append(accessCheckbox);
+                }
+                {
+                    const accessSpan = document.createElement("span");
+                    accessLabel.append(accessSpan);
+                }
+                accessElement.append(accessLabel);
+            }
+            entryElement.append(accessElement);
+        }
+        tblContainer.append(entryElement)
+    }
+
+
+
+
+
+
+
+</script>

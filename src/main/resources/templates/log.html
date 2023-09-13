@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sunlab Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"-->
+    <!--          integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">-->
+</head>
+<body>
+<div th:insert="~{layout::header}"></div>
+
+<p>Log Page</p>
+<div id="table-container">
+
+</div>
+<a class="btn nav-btn" href="/admin">
+    Back
+</a>
+<div th:insert="~{layout::footer}"></div>
+</body>
+</html>
+<script type="module">
+
+    // Import the functions you need from the SDKs you need
+
+    import { initializeApp} from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { collection, addDoc, setDoc, getDoc, doc, updateDoc, getFirestore, getDocs, query, limit, orderBy, where } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    // import M from "materialize-css"
+    // TODO: Add SDKs for Firebase products that you want to use
+
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+
+    // Your web app's Firebase configuration
+    //TODO move this to remove redundancy between pages and seal api key leaks
+    const firebaseConfig = {
+        apiKey: "AIzaSyCr-hdweuFimP-JarXSuc5b665HpULZpII",
+        authDomain: "sunlab-6fa5a.firebaseapp.com",
+        projectId: "sunlab-6fa5a",
+        storageBucket: "sunlab-6fa5a.appspot.com",
+        messagingSenderId: "335237155549",
+        appId: "1:335237155549:web:0faa7bf48b46f6ae51a934"
+    };
+
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tblContainer = document.getElementById("table-container");
+    let logList = [];
+
+
+    //this is a bit of a mess, need to figure out how to clean it up without breaking scoping TODO
+    const filterRow = document.createElement("div");
+    filterRow.className = "row card";
+    //TODO add listeners
+    const filterId = document.createElement("input");
+    {
+        filterId.type = "text";
+        filterId.className = "col s2"
+        filterId.addEventListener("change",function(){
+            reload();
+        })
+        filterRow.append(filterId);
+    }
+    const filterName = document.createElement("input");
+    {
+        filterName.type = "text"
+        filterName.className = "col s5"
+        filterName.addEventListener("change",function(){
+            reload();
+        })
+        filterRow.append(filterName);
+    }
+    const filterTime = document.createElement("select");
+    {
+        filterTime.className = "col s5 browser-default";
+        {
+            const unselectOption = document.createElement("option");
+            unselectOption.value = "0";
+            unselectOption.innerHTML = "---"
+            filterTime.append(unselectOption)
+        }
+        {
+            const morningOption = document.createElement("option");
+            morningOption.value = "1";
+            morningOption.innerHTML = "Morning"
+            filterTime.append(morningOption)
+        }
+        {
+            const afternoonOption = document.createElement("option");
+            afternoonOption.value = "2";
+            afternoonOption.innerHTML = "Afternoon"
+            filterTime.append(afternoonOption)
+        }
+        {
+            const eveningOption = document.createElement("option");
+            eveningOption.value = "3";
+            eveningOption.innerHTML = "Evening"
+            filterTime.append(eveningOption)
+        }
+        {
+            const nightOption = document.createElement("option");
+            nightOption.value = "4";
+            nightOption.innerHTML = "Night"
+            filterTime.append(nightOption)
+        }
+        //TODO add options
+        filterTime.addEventListener("change",function(){
+            reload();
+        })
+        filterRow.append(filterTime);
+    }
+
+
+    load();
+
+    async function load() {
+        await populateLogList();
+        console.log(logList);
+        logList.forEach(e=>addElement(e));
+        tblContainer.append(filterRow);
+        logList.forEach(e=>tblContainer.append(e.element));
+    }
+    async function populateLogList(){
+        (await getDocs(query(collection(db, "log"))))
+            .forEach(doc=>{
+                // console.log(doc.data())
+                logList.push(doc.data());
+            });
+        for (const e of logList) {
+            await addName(e);
+        }
+        logList.forEach(e=>addDate(e));
+    }
+    function reload(){
+        // while(tblContainer.lastElementChild){
+        //     tblContainer.removeChild(tblContainer.lastElementChild)
+        // }
+        // tblContainer.append(filterRow);
+        // console.log(logList);
+        logList.forEach(e=>e.element.style.display="none")
+        logList
+            .filter(
+                entry => entry.id.includes(filterId.value)
+            )
+            .filter(
+                entry => entry.name.includes(filterName.value)
+            )
+            .filter(
+                entry => {
+                    let hours = entry.date.getHours();
+                    // console.log(hours);
+                    // console.log(entry.date.getUTCHours());
+                    switch(filterTime.value){
+                        case "0":
+                            return true;
+                        case "1":
+                            return hours >= 6 && hours < 12;
+                        case "2":
+                            return hours >= 12 && hours < 18;
+                        case "3":
+                            return hours >= 18;
+                        case "4":
+                            return hours < 6;
+                    }
+                }
+            )
+            .forEach(
+                e=>e.element.style.display="inherit"
+            )
+    }
+
+    async function addName(data){
+        data.name = (await getDoc(doc(db, "users", data.id))).data().name;
+        return data;
+    }
+    function addDate(data){
+        data.date = new Date(data.time.seconds*1000);
+        return data;
+    }
+    function addElement(data){
+        const rowContainer = document.createElement("div");
+        rowContainer.className = "row card";
+        {
+            const columnId = document.createElement("div");
+            columnId.className = "col s2 card";
+            columnId.innerHTML = data.id;
+            rowContainer.append(columnId);
+        }
+        {
+            const columnName = document.createElement("div");
+            columnName.className = "col s5 card";
+            columnName.innerHTML = data.name;
+            rowContainer.append(columnName);
+        }
+        {
+            const columnTime = document.createElement("div");
+            columnTime.className = "col s5 card";
+            // console.log(data.time);
+            // let ISOString = data.date.toISOString();
+            // columnTime.innerHTML = ISOString.substring(0, ISOString.indexOf("."));
+            columnTime.innerHTML = data.date.toLocaleString('en-US', { timeZone: 'America/New_York' })
+
+            rowContainer.append(columnTime);
+        }
+
+        data.element = rowContainer;
+    }
+
+</script>

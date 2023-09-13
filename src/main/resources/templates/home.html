@@ -1,0 +1,170 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sunlab Access System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<div th:insert="~{layout::header}"></div>
+
+<a id="alert"></a>
+<label for="reader">Swipe</label>
+<input id="reader" type="text">
+<a class="btn nav-btn" href="/login">
+    Admin
+</a>
+
+
+<div th:insert="~{layout::footer}"></div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
+        crossorigin="anonymous"></script>
+</body>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+<!--<script src="https://unpkg.com/vue@3.2.47/dist/vue.global.js"></script>-->
+<!--<script>-->
+<!--    const {createApp} = Vue;-->
+<!--    createApp({-->
+<!--        el:"#app",-->
+<!--        data(){-->
+<!--            return{-->
+<!--            }-->
+<!--        },-->
+<!--        created:function(){-->
+
+<!--        },-->
+<!--        methods: {-->
+<!--            tryRead: function(){-->
+<!--                let id = document.getElementById("reader").value;-->
+<!--                this.attemptLog(id);-->
+<!--            }-->
+<!--        }-->
+<!--    }).mount("#app");-->
+<!--</script>-->
+
+<script type="module">
+
+    document.getElementById("reader").addEventListener("keydown", function(e){
+        if(e.code === "Enter"){
+            tryRead();
+        }
+    });
+
+    // Import the functions you need from the SDKs you need
+
+    import { initializeApp} from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { collection, addDoc, getDoc, doc, getFirestore, getDocs, query, limit, orderBy, where } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    // import M from "materialize-css"
+    // TODO: Add SDKs for Firebase products that you want to use
+
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+
+    // Your web app's Firebase configuration
+    //TODO move this to remove redundancy between pages and seal api key leaks
+    const firebaseConfig = {
+        apiKey: "AIzaSyCr-hdweuFimP-JarXSuc5b665HpULZpII",
+        authDomain: "sunlab-6fa5a.firebaseapp.com",
+        projectId: "sunlab-6fa5a",
+        storageBucket: "sunlab-6fa5a.appspot.com",
+        messagingSenderId: "335237155549",
+        appId: "1:335237155549:web:0faa7bf48b46f6ae51a934"
+    };
+
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+
+
+
+    window.attemptLog=attemptLog;
+    // (await getDocs(collection(db, "highscores"))).forEach(doc=>console.log(doc.data()));
+    async function log(id){
+        console.log("logging...")
+        await addDoc(collection(db, "log"), {
+            id: id,
+            time: new Date(Date.now())
+        });
+        console.log("log success")
+
+    }
+    function logData(data, id){
+        if(typeof(data)=="undefined"){
+            console.log("ID not recognized")
+            alert("ID not recognized")
+            return;
+        }
+        let permission = data.permission;
+        console.log("id=" + id)
+        console.log("access=" + permission)
+
+        if(!permission){
+            console.log("Access denied")
+            alert("Access denied")
+            // alertElement.value = "Access denied"
+            // alertElement.class = "alert alert-danger"
+            // M.toast({html: "Access denied"})
+            return;
+        }
+        console.log("Access granted")
+        log(id);
+        alert("Access granted")
+        // alertElement.value = "Access granted"
+        // alertElement.class = "alert alert-success"
+        // M.toast({html: "Access granted"})
+
+    }
+
+    async function attemptLog(id){
+        // const alertElement = document.getElementById("alert");
+        console.log("attempting log");
+        // let flag = true;
+        // console.log((await getDocs(query(collection(db, "users")))).data())
+        // (await getDocs(query(collection(db, "users")))).forEach(
+        //     doc=>console.log(doc.data())
+        // );
+        // (await getDocs(query(collection(db, "users"), where("id", "==", id)))).forEach(.forEach(
+        //     q=>{
+        //         flag = false;
+        //         let d = q.data();
+        //         console.log(d);
+        //         logData(id, d.access);
+        //     }
+        // );
+
+        logData((await getDoc(doc(db, "users", id))).data(), id)
+
+        // if(flag){
+        //     console.log("ID not recognized")
+        //     alert("ID not recognized")
+        //     // alertElement.value = "ID not recognized"
+        //     // alertElement.class = "alert alert-warning"
+        //     // M.toast({html: "ID not recognized"})
+        //     return;
+        // }
+
+
+    }
+    async function tryRead(){
+        console.log("trying read")
+        let id = document.getElementById("reader").value;
+        await attemptLog(id);
+    }
+
+
+
+
+</script>
+</html>
